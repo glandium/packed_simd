@@ -202,7 +202,6 @@
 #![feature(
     repr_simd,
     rustc_attrs,
-    const_fn,
     platform_intrinsics,
     stdsimd,
     aarch64_target_feature,

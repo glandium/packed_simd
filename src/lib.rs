@@ -200,6 +200,7 @@
 //!   preserving, etc.
 
 #![feature(
+    const_generics,
     repr_simd,
     rustc_attrs,
     platform_intrinsics,
@@ -216,6 +217,7 @@
         // FIXME: these types are unsound in C FFI already
         // See https://github.com/rust-lang/rust/issues/53346
         improper_ctypes_definitions,
+        incomplete_features,
         clippy::cast_possible_truncation,
         clippy::cast_lossless,
         clippy::cast_possible_wrap,
@@ -226,6 +228,7 @@
         // See https://github.com/rust-lang/rust-clippy/issues/3410
         clippy::use_self,
         clippy::wrong_self_convention,
+        clippy::from_over_into,
 )]
 #![cfg_attr(test, feature(hashmap_internals))]
 #![deny(rust_2018_idioms, clippy::missing_inline_in_public_items)]

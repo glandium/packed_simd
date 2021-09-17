@@ -8,23 +8,26 @@ fn main() {
         println!("cargo:rustc-cfg=libcore_neon");
     }
     let ver_meta = version_meta().unwrap();
-    let old_const_generics = match dbg!(ver_meta.channel) {
-        Channel::Stable | Channel::Beta
-            if ver_meta.semver < Version::parse("1.56.0-alpha").unwrap() =>
-        {
+    let old_const_generics =
+        if ver_meta.semver < Version::parse("1.56.0-alpha").unwrap() {
             true
-        }
-        Channel::Nightly | Channel::Dev
-            if ver_meta
-                .commit_date
-                .as_deref()
-                .map(|d| d < "2021-08-31")
-                .unwrap_or(false) =>
-        {
-            true
-        }
-        _ => false,
-    };
+        } else if ver_meta.semver >= Version::parse("1.57.0-alpha").unwrap() {
+            false
+        } else {
+            match ver_meta.channel {
+                Channel::Stable | Channel::Beta => false,
+                Channel::Nightly | Channel::Dev
+                    if ver_meta
+                        .commit_date
+                        .as_deref()
+                        .map(|d| d < "2021-08-31")
+                        .unwrap_or(false) =>
+                {
+                    true
+                }
+                _ => false,
+            }
+        };
     if old_const_generics {
         println!("cargo:rustc-cfg=const_generics");
     }

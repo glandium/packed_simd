@@ -13,8 +13,8 @@
 //! - [Vector types](#vector-types)
 //! - [Conditional operations](#conditional-operations)
 //! - [Conversions](#conversions)
-//! - [Performance
-//!   guide](https://rust-lang-nursery.github.io/packed_simd/perf-guide/)
+//! - [Hardware Features](#hardware-features)
+//! - [Performance guide](https://rust-lang-nursery.github.io/packed_simd/perf-guide/)
 //!
 //! ## Introduction
 //!
@@ -26,7 +26,7 @@
 //! are applied to each vector lane in isolation of the others:
 //!
 //! ```
-//! # use packed_simd::*;
+//! # use packed_simd_2::*;
 //! let a = i32x4::new(1, 2, 3, 4);
 //! let b = i32x4::new(5, 6, 7, 8);
 //! assert_eq!(a + b, i32x4::new(6, 8, 10, 12));
@@ -35,7 +35,7 @@
 //! Many "horizontal" operations are also provided:
 //!
 //! ```
-//! # use packed_simd::*;
+//! # use packed_simd_2::*;
 //! # let a = i32x4::new(1, 2, 3, 4);
 //! assert_eq!(a.wrapping_sum(), 10);
 //! ```
@@ -47,9 +47,9 @@
 //! and performing a single horizontal operation at the end:
 //!
 //! ```
-//! # use packed_simd::*;
+//! # use packed_simd_2::*;
 //! fn reduce(x: &[i32]) -> i32 {
-//!     assert!(x.len() % 4 == 0);
+//!     assert_eq!(x.len() % 4, 0);
 //!     let mut sum = i32x4::splat(0); // [0, 0, 0, 0]
 //!     for i in (0..x.len()).step_by(4) {
 //!         sum += i32x4::from_slice_unaligned(&x[i..]);
@@ -79,7 +79,7 @@
 //! ## Basic operations
 //!
 //! ```
-//! # use packed_simd::*;
+//! # use packed_simd_2::*;
 //! // Sets all elements to `0`:
 //! let a = i32x4::splat(0);
 //!
@@ -107,7 +107,7 @@
 //! to be performed:
 //!
 //! ```
-//! # use packed_simd::*;
+//! # use packed_simd_2::*;
 //! let a = i32x4::new(1, 1, 2, 2);
 //!
 //! // Add `1` to the first two lanes of the vector.
@@ -134,13 +134,13 @@
 //! > of lanes as the mask. The example shows this by using [`m16x4`] instead
 //! > of [`m32x4`]. It is _typically_ more performant to use a mask element
 //! > width equal to the element width of the vectors being operated upon.
-//! > This is, however, not true for 512-bit wide vectors when targetting
+//! > This is, however, not true for 512-bit wide vectors when targeting
 //! > AVX-512, where the most efficient masks use only 1-bit per element.
 //!
 //! All vertical comparison operations returns masks:
 //!
 //! ```
-//! # use packed_simd::*;
+//! # use packed_simd_2::*;
 //! let a = i32x4::new(1, 1, 3, 3);
 //! let b = i32x4::new(2, 2, 0, 0);
 //!
@@ -168,11 +168,11 @@
 //!   u8x8 = m8x8::splat(true).into_bits();` is provided because all `m8x8` bit
 //!   patterns are valid `u8x8` bit patterns. However, the opposite is not
 //! true,   not all `u8x8` bit patterns are valid `m8x8` bit-patterns, so this
-//!   operation cannot be peformed safely using `x.into_bits()`; one needs to
+//!   operation cannot be performed safely using `x.into_bits()`; one needs to
 //!   use `unsafe { crate::mem::transmute(x) }` for that, making sure that the
 //!   value in the `u8x8` is a valid bit-pattern of `m8x8`.
 //!
-//! * **numeric casts** (`as`): are peformed using [`FromCast`]/[`Cast`]
+//! * **numeric casts** (`as`): are performed using [`FromCast`]/[`Cast`]
 //! (`x.cast()`), just like `as`:
 //!
 //!   * casting integer vectors whose lane types have the same size (e.g.
@@ -198,6 +198,18 @@
 //!
 //!   Numeric casts are not very "precise": sometimes lossy, sometimes value
 //!   preserving, etc.
+//!
+//! ## Hardware Features
+//!
+//! This crate can use different hardware features based on your configured
+//! `RUSTFLAGS`. For example, with no configured `RUSTFLAGS`, `u64x8` on
+//! x86_64 will use SSE2 operations like `PCMPEQD`. If you configure
+//! `RUSTFLAGS='-C target-feature=+avx2,+avx'` on supported x86_64 hardware
+//! the same `u64x8` may use wider AVX2 operations like `VPCMPEQQ`. It is
+//! important for performance and for hardware support requirements that
+//! you choose an appropriate set of `target-feature` and `target-cpu`
+//! options during builds. For more information, see the [Performance
+//! guide](https://rust-lang-nursery.github.io/packed_simd/perf-guide/)
 
 #![cfg_attr(const_generics, feature(const_generics))]
 #![cfg_attr(not(const_generics), feature(adt_const_params))]
@@ -252,9 +264,8 @@ use wasm_bindgen_test::*;
 
 #[allow(unused_imports)]
 use core::{
-    /* arch (handled above), */ cmp, f32, f64, fmt, hash, hint, i128,
-    i16, i32, i64, i8, intrinsics, isize, iter, marker, mem, ops, ptr, slice,
-    u128, u16, u32, u64, u8, usize,
+    /* arch (handled above), */ cmp, f32, f64, fmt, hash, hint, i128, i16, i32, i64, i8, intrinsics,
+    isize, iter, marker, mem, ops, ptr, slice, u128, u16, u32, u64, u8, usize,
 };
 
 #[macro_use]
@@ -264,14 +275,14 @@ mod api;
 mod codegen;
 mod sealed;
 
-pub use crate::sealed::{Simd as SimdVector, Shuffle, SimdArray, Mask};
+pub use crate::sealed::{Mask, Shuffle, Simd as SimdVector, SimdArray};
 
 /// Packed SIMD vector type.
 ///
 /// # Examples
 ///
 /// ```
-/// # use packed_simd::Simd;
+/// # use packed_simd_2::Simd;
 /// let v = Simd::<[i32; 4]>::new(0, 1, 2, 3);
 /// assert_eq!(v.extract(2), 2);
 /// ```
@@ -330,8 +341,8 @@ pub use self::api::into_bits::*;
 // Re-export the shuffle intrinsics required by the `shuffle!` macro.
 #[doc(hidden)]
 pub use self::codegen::llvm::{
-    __shuffle_vector16, __shuffle_vector2, __shuffle_vector32,
-    __shuffle_vector4, __shuffle_vector64, __shuffle_vector8,
+    __shuffle_vector16, __shuffle_vector2, __shuffle_vector32, __shuffle_vector4, __shuffle_vector64,
+    __shuffle_vector8,
 };
 
 crate mod llvm {
